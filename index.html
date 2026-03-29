@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sento</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Audio callback bridge - must be non-module for WE to detect it -->
+  <script>
+    // This array will be filled by Wallpaper Engine
+    window.audioData = null;
+    
+    // Callback function for Wallpaper Engine audio
+    function wallpaperAudioListener(audioArray) {
+      window.audioData = audioArray;
+    }
+    
+    // Register immediately - WE requires this at end of body, not in modules/onload
+    window.wallpaperRegisterAudioListener(wallpaperAudioListener);
+  </script>
+  
+  <!-- Main app as module -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

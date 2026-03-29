@@ -1,0 +1,112 @@
+{
+    "file": "index.html",
+    "preview": "preview.jpg",
+    "title": "Sento",
+    "description": "Real-time 3D audio visualizer — maps sound to pitch × amplitude × spread.",
+    "type": "web",
+    "audioprocessing": true,
+    "general": {
+        "supportsaudioprocessing": true,
+        "properties": {
+            "traillength": {
+                "text": "Trail Length",
+                "type": "slider",
+                "value": 600,
+                "min": 100,
+                "max": 1200,
+                "step": 50
+            },
+            "spheresize": {
+                "text": "Sphere Size",
+                "type": "slider",
+                "value": 1.0,
+                "min": 0.2,
+                "max": 3.0,
+                "step": 0.2
+            },
+            "lineopacity": {
+                "text": "Trail Line Opacity",
+                "type": "slider",
+                "value": 0.25,
+                "min": 0.0,
+                "max": 1.0,
+                "step": 0.05
+            },
+            "colorsaturation": {
+                "text": "Color Saturation",
+                "type": "slider",
+                "value": 0.9,
+                "min": 0.0,
+                "max": 1.0,
+                "step": 0.1
+            },
+            "colorhueshift": {
+                "text": "Color Hue Shift",
+                "type": "slider",
+                "value": 0.0,
+                "min": 0.0,
+                "max": 1.0,
+                "step": 0.1
+            },
+            "backgroundcolor": {
+                "text": "Background Color",
+                "type": "color",
+                "value": "0.02 0.02 0.03"
+            },
+            "fogdensity": {
+                "text": "Fog Density",
+                "type": "slider",
+                "value": 0.018,
+                "min": 0.0,
+                "max": 0.06,
+                "step": 0.002
+            },
+            "spacescale": {
+                "text": "Spatial Spread",
+                "type": "slider",
+                "value": 12,
+                "min": 4,
+                "max": 30,
+                "step": 1
+            },
+            "energysensitivity": {
+                "text": "Energy Sensitivity",
+                "type": "slider",
+                "value": 1.0,
+                "min": 0.3,
+                "max": 3.0,
+                "step": 0.1
+            },
+            "cameradistance": {
+                "text": "Camera Distance",
+                "type": "slider",
+                "value": 22,
+                "min": 8,
+                "max": 50,
+                "step": 1
+            },
+            "cameraheight": {
+                "text": "Camera Height",
+                "type": "slider",
+                "value": 8,
+                "min": 0,
+                "max": 20,
+                "step": 1
+            },
+            "autorotate": {
+                "text": "Auto-Rotate When Idle",
+                "type": "bool",
+                "value": true
+            },
+            "autorotatespeed": {
+                "text": "Auto-Rotate Speed",
+                "type": "slider",
+                "value": 0.3,
+                "min": 0.05,
+                "max": 1.0,
+                "step": 0.05,
+                "condition": "autorotate.value == true"
+            }
+        }
+    }
+}
