@@ -2,7 +2,7 @@
     "file": "index.html",
     "preview": "preview.jpg",
     "title": "Sento",
-    "description": "Real-time 3D audio visualizer — maps sound to pitch × amplitude × spread.",
+    "description": "Real-time 3D audio visualizer — embeds timbre, intensity, and texture into a latent spatial trail.",
     "type": "web",
     "audioprocessing": true,
     "general": {
