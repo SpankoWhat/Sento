@@ -16,8 +16,10 @@
       window.audioData = audioArray;
     }
     
-    // Register immediately - WE requires this at end of body, not in modules/onload
-    window.wallpaperRegisterAudioListener(wallpaperAudioListener);
+    // Register immediately when Wallpaper Engine is present.
+    if (typeof window.wallpaperRegisterAudioListener === 'function') {
+      window.wallpaperRegisterAudioListener(wallpaperAudioListener);
+    }
   </script>
   
   <!-- Main app as module -->

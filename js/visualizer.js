@@ -17,6 +17,10 @@ const dummy = new THREE.Object3D();
 const _col = new THREE.Color();
 const graphCenter = new THREE.Vector3(0, 0, 0);
 
+function clamp01(value) {
+  return Math.min(1, Math.max(0, value));
+}
+
 function updateMesh() {
   const n = history.length;
   instancedMesh.count = n;
@@ -39,9 +43,10 @@ function updateMesh() {
     dummy.updateMatrix();
     instancedMesh.setMatrixAt(i, dummy.matrix);
 
-    const lit = 0.25 + p.energy * 0.5 + age * 0.25;
+    const lit = clamp01((p.lightness ?? 0.3) * (0.3 + age * 0.7));
     const hue = (p.hue + cfg.colorHueShift) % 1.0;
-    _col.setHSL(hue, cfg.colorSaturation, lit * age);
+    const sat = clamp01((p.saturation ?? 0.75) * cfg.colorSaturation);
+    _col.setHSL(hue, sat, lit);
     instanceColors[i * 3 + 0] = _col.r;
     instanceColors[i * 3 + 1] = _col.g;
     instanceColors[i * 3 + 2] = _col.b;

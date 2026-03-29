@@ -1,72 +1,14 @@
 import { cfg } from './config.js';
+import { createEmbeddingPoint } from './embedding.js';
 
 // ─── Audio history ──────────────────────────────────────────────────────────
-// Each point stores: { x: spectralCentroid, y: amplitude, z: spectralSpread, size, hue }
+// Each point stores a 3D latent embedding plus render metadata.
 export const history = [];
-
-// ─── Audio feature extraction ───────────────────────────────────────────────
-function extractFeatures(raw) {
-  // raw: 128 floats (64 left + 64 right), values 0..1
-  const bins = 64;
-  const spectrum = new Float32Array(bins);
-  for (let i = 0; i < bins; i++) {
-    spectrum[i] = (raw[i] + raw[i + bins]) * 0.5;
-  }
-
-  // Total energy (RMS-like)
-  let energy = 0;
-  for (let i = 0; i < bins; i++) energy += spectrum[i] * spectrum[i];
-  energy = Math.sqrt(energy / bins);
-
-  // Spectral centroid (weighted average frequency)
-  let centroidNum = 0, centroidDen = 0;
-  for (let i = 0; i < bins; i++) {
-    centroidNum += i * spectrum[i];
-    centroidDen += spectrum[i];
-  }
-  const centroid = centroidDen > 0.001 ? centroidNum / centroidDen / bins : 0.5;
-
-  // Spectral spread (standard deviation around centroid)
-  let spreadNum = 0;
-  for (let i = 0; i < bins; i++) {
-    const diff = (i / bins) - centroid;
-    spreadNum += diff * diff * spectrum[i];
-  }
-  const spread = centroidDen > 0.001 ? Math.sqrt(spreadNum / centroidDen) : 0;
-
-  // Spectral flatness (geometric mean / arithmetic mean) — indicates noisiness
-  let geoSum = 0, ariSum = 0;
-  for (let i = 0; i < bins; i++) {
-    const v = Math.max(spectrum[i], 1e-10);
-    geoSum += Math.log(v);
-    ariSum += v;
-  }
-  const geoMean = Math.exp(geoSum / bins);
-  const ariMean = ariSum / bins;
-  const flatness = ariMean > 1e-10 ? geoMean / ariMean : 0;
-
-  return { energy, centroid, spread, flatness };
-}
 
 // ─── Audio callback ─────────────────────────────────────────────────────────
 export function onAudioData(raw) {
-  const f = extractFeatures(raw);
-
-  // Apply energy sensitivity
-  const energy = f.energy * cfg.energySensitivity;
-
-  // Map features to 3D position
-  const x = (f.centroid - 0.5) * 2 * cfg.spaceScale;
-  const y = energy * cfg.spaceScale * 1.5;
-  const z = (f.spread - 0.15) * 4 * cfg.spaceScale;
-
-  // Size based on energy
-  const size = 0.08 + energy * 0.6;
-
-  // Hue based on spectral centroid (low=red, high=blue)
-  const hue = f.centroid * 0.75;
-
-  history.push({ x, y, z, size, hue, energy });
+  const point = createEmbeddingPoint(raw);
+  history.push(point);
   if (history.length > cfg.trailLength) history.shift();
 }
 
@@ -76,48 +18,82 @@ export async function startBrowserFallback() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const ctx = new AudioContext();
     const src = ctx.createMediaStreamSource(stream);
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.6;
-    src.connect(analyser);
-    const buf = new Float32Array(128);
+    const splitter = ctx.createChannelSplitter(2);
+    const leftAnalyser = ctx.createAnalyser();
+    const rightAnalyser = ctx.createAnalyser();
+
+    leftAnalyser.fftSize = 128;
+    rightAnalyser.fftSize = 128;
+    leftAnalyser.smoothingTimeConstant = 0.65;
+    rightAnalyser.smoothingTimeConstant = 0.65;
+
+    src.connect(splitter);
+    splitter.connect(leftAnalyser, 0);
+    splitter.connect(rightAnalyser, 1);
+
+    const leftBuf = new Float32Array(leftAnalyser.frequencyBinCount);
+    const rightBuf = new Float32Array(rightAnalyser.frequencyBinCount);
 
     function tick() {
-      analyser.getFloatFrequencyData(buf);
-      const normalized = new Float32Array(128);
-      for (let i = 0; i < 128; i++) {
-        normalized[i] = Math.max(0, (buf[i] + 80) / 80);
+      leftAnalyser.getFloatFrequencyData(leftBuf);
+      rightAnalyser.getFloatFrequencyData(rightBuf);
+
+      let rightLevel = 0;
+      for (let i = 0; i < rightBuf.length; i++) {
+        rightLevel += Math.max(0, (rightBuf[i] + 80) / 80);
       }
+
+      const normalized = new Float32Array(128);
+      const hasRightChannel = rightLevel > 0.01;
+
+      for (let i = 0; i < 64; i++) {
+        const left = Math.max(0, (leftBuf[i] + 80) / 80);
+        const right = Math.max(0, (rightBuf[i] + 80) / 80);
+        normalized[i] = left;
+        normalized[i + 64] = hasRightChannel ? right : left;
+      }
+
       onAudioData(normalized);
       requestAnimationFrame(tick);
     }
+
     tick();
   } catch {
-    // Procedural demo: simulate a wandering "birdsong" trajectory
+    // Procedural demo: simulate motion across the embedding axes.
     let t = 0;
+
     function demo() {
       t += 0.025;
       const fake = new Float32Array(128);
-      
-      // Create distinct "phrases" with varying pitch and energy
-      const phrase = Math.floor(t / 3) % 5;
-      const inPhrase = (t % 3) / 3;
-      
-      const basePitch = [0.3, 0.6, 0.45, 0.75, 0.5][phrase];
-      const pitchWobble = Math.sin(t * 8) * 0.15 + Math.sin(t * 12) * 0.08;
-      const targetPitch = basePitch + pitchWobble;
-      
-      const envelope = Math.sin(inPhrase * Math.PI) * (0.5 + 0.5 * Math.sin(t * 15));
-      
-      for (let i = 0; i < 128; i++) {
-        const f = i / 128;
-        const dist = Math.abs(f - targetPitch);
-        const v = Math.exp(-dist * dist * 80) * envelope;
-        fake[i] = Math.min(1, v + Math.random() * 0.02);
+      const phrase = Math.floor(t / 2.8) % 5;
+      const phrasePos = (t % 2.8) / 2.8;
+
+      const basePitch = [0.18, 0.48, 0.32, 0.74, 0.56][phrase];
+      const pitchDrift = Math.sin(t * 4.5) * 0.05 + Math.sin(t * 10.5) * 0.03;
+      const pan = Math.sin(t * 0.8) * 0.55 + Math.sin(t * 0.23) * 0.18;
+      const width = 0.08 + (0.5 + 0.5 * Math.sin(t * 1.7 + phrase)) * 0.2;
+      const brightness = 0.45 + 0.35 * Math.sin(t * 0.6 + phrase);
+      const envelope = 0.16 + Math.pow(Math.sin(phrasePos * Math.PI), 1.5) * 0.9;
+
+      for (let i = 0; i < 64; i++) {
+        const f = i / 63;
+        const leftCenter = basePitch + pitchDrift - pan * 0.05 - width * 0.03;
+        const rightCenter = basePitch + pitchDrift + pan * 0.05 + width * 0.03;
+
+        const leftBody = Math.exp(-Math.pow(f - leftCenter, 2) * (70 - brightness * 25));
+        const rightBody = Math.exp(-Math.pow(f - rightCenter, 2) * (70 - brightness * 25));
+        const leftHarmonic = Math.exp(-Math.pow(f - (leftCenter + 0.14), 2) * 150) * 0.45;
+        const rightHarmonic = Math.exp(-Math.pow(f - (rightCenter + 0.14), 2) * 150) * 0.45;
+        const noise = Math.random() * (0.02 + brightness * 0.08);
+
+        fake[i] = Math.min(1, (leftBody + leftHarmonic) * envelope + noise);
+        fake[i + 64] = Math.min(1, (rightBody + rightHarmonic) * envelope + noise * (0.7 + width));
       }
+
       onAudioData(fake);
       requestAnimationFrame(demo);
     }
+
     demo();
   }
 }
