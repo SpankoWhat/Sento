@@ -47,22 +47,24 @@ function decodeStereoSpectrum(raw) {
   return { left, right };
 }
 
+// Computes a set of low-level spectral features from the raw frequency data.
+// These are the building blocks used by deriveState to produce higher-level descriptors.
 function extractEmbeddingFeatures(raw) {
   const { left, right } = decodeStereoSpectrum(raw);
   const mono = new Float32Array(BINS_PER_CHANNEL);
 
   let amplitudeSum = 0;
-  let energySum = 0;
-  let leftEnergy = 0;
-  let rightEnergy = 0;
-  let centroidNum = 0;
-  let diffSum = 0;
-  let fluxSum = 0;
-  let geoSum = 0;
+  let energySum = 0;   // Accumulates squared mono amplitudes → used for RMS energy.
+  let leftEnergy = 0;  // Squared left-channel amplitudes → used for stereo balance.
+  let rightEnergy = 0; // Squared right-channel amplitudes → used for stereo balance.
+  let centroidNum = 0; // Weighted frequency sum → numerator for spectral centroid.
+  let diffSum = 0;     // Sum of absolute L/R differences per bin → stereo width.
+  let fluxSum = 0;     // Sum of positive amplitude increases vs. last frame → onset/transient detection.
+  let geoSum = 0;      // Sum of log amplitudes → used for geometric mean in flatness.
 
-  let low = 0;
-  let mid = 0;
-  let high = 0;
+  let low = 0;   // Accumulated amplitude in the bass band (0–22% of spectrum).
+  let mid = 0;   // Accumulated amplitude in the midrange band (22–60%).
+  let high = 0;  // Accumulated amplitude in the treble band (60–100%).
 
   for (let i = 0; i < BINS_PER_CHANNEL; i++) {
     const l = left[i];
@@ -89,7 +91,11 @@ function extractEmbeddingFeatures(raw) {
     }
   }
 
+  // RMS of the mono spectrum — overall loudness/power of the signal. Range: [0, 1].
   const energy = Math.sqrt(energySum / BINS_PER_CHANNEL);
+
+  // Spectral centroid — amplitude-weighted average frequency position.
+  // Low = bass-heavy (dark/warm), high = treble-heavy (bright/sharp). Range: [0, 1].
   const centroid = amplitudeSum > EPS ? centroidNum / amplitudeSum : 0.5;
 
   let spreadNum = 0;
@@ -105,21 +111,43 @@ function extractEmbeddingFeatures(raw) {
     spreadNum += diff * diff * value;
     cumulative += value;
 
+    // Spectral rolloff — the frequency below which 85% of total energy falls.
+    // High rolloff = most energy is in the upper frequencies; low = mostly bass. Range: [0, 1].
     if (amplitudeSum > EPS && rolloff === 0.5 && cumulative >= rolloffThreshold) {
       rolloff = freq;
     }
   }
 
+  // Spectral spread — amplitude-weighted standard deviation of frequency around the centroid.
+  // Narrow = focused/tonal (sine wave), wide = scattered (noise or dense mix). Range: [0, ~0.5].
   const spread = amplitudeSum > EPS ? Math.sqrt(spreadNum / amplitudeSum) : 0;
+
   const arithmeticMean = amplitudeSum / BINS_PER_CHANNEL;
+
+  // Spectral flatness — ratio of geometric mean to arithmetic mean.
+  // Near 1 = noise-like (flat spectrum), near 0 = tonal (clear peaks). Range: [0, 1].
   const flatness = arithmeticMean > EPS ? Math.exp(geoSum / BINS_PER_CHANNEL) / arithmeticMean : 0;
+
+  // Stereo balance — normalized energy difference between right and left channels.
+  // Negative = left-heavy, positive = right-heavy, 0 = balanced. Range: [-1, 1].
   const balance = (rightEnergy - leftEnergy) / (rightEnergy + leftEnergy + EPS);
+
+  // Stereo width — how different L and R channels are from each other.
+  // 0 = mono signal, 1 = maximally wide stereo. Range: [0, 1].
   const width = clamp01(diffSum / (amplitudeSum * 2 + EPS));
+
+  // Spectral flux — rate of change in the spectrum compared to the previous frame.
+  // Spikes on onsets/attacks (drum hits, note starts), low during sustained/quiet sounds. Range: [0, 1].
   const flux = clamp01((fluxSum / BINS_PER_CHANNEL) * 6);
 
-  const lowRatio = low / (amplitudeSum + EPS);
-  const midRatio = mid / (amplitudeSum + EPS);
-  const highRatio = high / (amplitudeSum + EPS);
+  // Band energy ratios — fraction of total amplitude in each frequency band.
+  // All three sum to approximately 1 and describe the tonal "shape" of the sound.
+  const lowRatio = low / (amplitudeSum + EPS);   // Bass / sub-bass share.
+  const midRatio = mid / (amplitudeSum + EPS);   // Midrange / vocals share.
+  const highRatio = high / (amplitudeSum + EPS); // Treble / air share.
+
+  // Spectral tilt — high-band energy minus low-band energy, normalized.
+  // Positive = bright/airy, negative = dark/bassy. Range: roughly [-1, 1].
   const lowHighTilt = (high - low) / (amplitudeSum + EPS);
 
   for (let i = 0; i < BINS_PER_CHANNEL; i++) {
@@ -146,15 +174,23 @@ function toCentered(value) {
   return clampSigned(value * 2 - 1);
 }
 
+// Combines low-level features from extractEmbeddingFeatures into higher-level perceptual
+// descriptors, and re-centers all values to [-1, 1] so they're ready to drive 3D coordinates.
 function deriveState(raw) {
   const features = extractEmbeddingFeatures(raw);
 
+  // Brightness — perceptual "darkness vs. brightness" of the sound.
+  // Blends three frequency-distribution measures (lowHighTilt, centroid, rolloff) for a
+  // robust, stable signal. Positive = bright/airy (treble-heavy), negative = dark/bassy. Range: [-1, 1].
   const brightness = clampSigned(
     features.lowHighTilt * 1.35 +
     (features.centroid - 0.5) * 1.1 +
     (features.rolloff - 0.5) * 0.7
   );
 
+  // Texture — perceptual roughness/complexity of the sound.
+  // High = noisy, wide, spectrally scattered (distorted guitars, dense pads, white noise).
+  // Low = clean, tonal, narrow (pure sine, flute, simple melody). Range: [-1, 1].
   const texture = clampSigned(
     (features.flatness - 0.28) * 1.8 +
     (features.spread - 0.18) * 2.6 +
@@ -162,11 +198,17 @@ function deriveState(raw) {
     features.midRatio * 0.25
   );
 
+  // Transient — detects sudden events: drum hits, note attacks, impacts.
+  // Combines positive energy delta (did the signal get louder since last frame?) and spectral
+  // flux (did the spectrum change?). Spikes briefly on onsets, decays quickly. Range: [0, 1].
   const transient = clamp01(
     Math.max(0, features.energy - prevPoint.energy) * 3.2 +
     features.flux * 0.9
   );
 
+  // Presence — how strongly the sound is asserting itself right now.
+  // A mix of raw loudness (energy, scaled by user sensitivity) and impact (transient).
+  // Think of it as "how much is the sound filling the space at this moment". Range: [0, 1].
   const presence = clamp01(
     features.energy * cfg.energySensitivity * 1.25 +
     transient * 0.35
@@ -178,6 +220,10 @@ function deriveState(raw) {
     texture,
     transient,
     presence,
+    // Signed variants: each raw feature has a natural baseline that isn't at zero
+    // (e.g. centroid averages ~0.5, spread ~0.18, band ratios are unequal). These
+    // subtract those baselines and stretch the range so typical silence/noise sits near
+    // 0 and deviations in either direction are meaningful for use as 3D axis inputs.
     centroidSigned: clampSigned((features.centroid - 0.5) * 2),
     spreadSigned: clampSigned((features.spread - 0.18) * 5),
     rolloffSigned: clampSigned((features.rolloff - 0.5) * 2),
@@ -224,6 +270,10 @@ function resolveCustomFeatureValue(feature, state) {
 }
 
 function computeTargets(state) {
+  // Classic mode: simple, direct mapping using three independent spectral features.
+  // X = timbral brightness (centroid re-centered around 0: bass-heavy left, treble-heavy right).
+  // Y = perceived loudness/intensity (presence, always positive so the point floats upward with volume).
+  // Z = spectral spread (how scattered the frequencies are; wide/complex sounds push further back).
   if (cfg.mappingMode === 'classic') {
     return {
       x: (state.centroid - 0.5) * 2 * cfg.spaceScale,
@@ -232,14 +282,23 @@ function computeTargets(state) {
     };
   }
 
+  // Custom mode: each axis is fully user-configured — any feature can be assigned to any axis,
+  // with independent per-axis emphasis multipliers to tune how strongly each feature drives movement.
   if (cfg.mappingMode === 'custom') {
     return {
       x: resolveCustomFeatureValue(cfg.xFeature, state) * cfg.spaceScale * cfg.xEmphasis,
-      y: resolveCustomFeatureValue(cfg.yFeature, state) * cfg.spaceScale * 1.3 * cfg.yEmphasis,
+      y: resolveCustomFeatureValue(cfg.yFeature, state) * cfg.spaceScale * cfg.yEmphasis,
       z: resolveCustomFeatureValue(cfg.zFeature, state) * cfg.spaceScale * cfg.zEmphasis,
     };
   }
 
+  // Default (expressive) mode: each axis blends multiple features for a richer, more
+  // organic feel. Features are weighted and mixed rather than mapped one-to-one.
+  // X = timbral color axis: primarily brightness (treble vs. bass tilt), nudged by stereo balance.
+  // Y = intensity/energy axis: biased downward at rest (-0.45 offset), pushed up by presence and
+  //     transients so the point rises sharply on loud hits and falls back during quiet passages.
+  // Z = spatial/complexity axis: driven by texture (noise/roughness), stereo width, and a touch
+  //     of balance — complex, wide sounds move furthest along this axis.
   return {
     x: clampSigned(state.brightness * 0.82 + state.balance * 0.35) * cfg.spaceScale,
     y: clampSigned(-0.45 + state.presence * 1.5 + state.transient * 0.2) * cfg.spaceScale * 1.3,

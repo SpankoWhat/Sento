@@ -37,7 +37,6 @@ Sento/
 
 ### `config.js`
 - Exports `cfg` object with all mutable settings
-- Exports `propertyDefs` with min/max/step for validation
 - Exports `MAX_SPHERES` constant
 
 ### `scene.js`
