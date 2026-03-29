@@ -63,6 +63,14 @@ if (typeof window.wallpaperRegisterAudioListener !== 'undefined') {
   // Cancel auto-start on any interaction
   picker.addEventListener('pointerdown', () => clearTimeout(autoStart));
 }
+// ─── Rotation slider ───────────────────────────────────────────────────────────
+import { cfg } from './config.js';
 
+const rotSlider = document.getElementById('rotation-slider');
+if (rotSlider) {
+  rotSlider.addEventListener('input', () => {
+    cfg.camTheta = Number(rotSlider.value);
+  });
+}
 // ─── Start render loop ──────────────────────────────────────────────────────
 animate();

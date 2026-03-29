@@ -95,11 +95,8 @@ window.wallpaperPropertyListener = {
     if (properties.cameraheight) {
       cfg.camHeight = properties.cameraheight.value;
     }
-    if (properties.autorotate !== undefined) {
-      cfg.autoRotate = properties.autorotate.value;
-    }
-    if (properties.autorotatespeed) {
-      cfg.autoRotateSpeed = properties.autorotatespeed.value;
+    if (properties.camtheta) {
+      cfg.camTheta = properties.camtheta.value;
     }
   }
 };

@@ -24,8 +24,7 @@ const keyMap = {
   glowintensity: 'glowIntensity',
   cameradistance:   'camRadius',
   cameraheight:     'camHeight',
-  autorotate:       'autoRotate',
-  autorotatespeed:  'autoRotateSpeed',
+  camtheta: 'camTheta',
 };
 
 // Side-effects that mirror controls.js wallpaperPropertyListener logic

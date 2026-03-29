@@ -126,9 +126,9 @@ export function updateViewportCameras(graphCenter, time) {
     if (!vp.enabled) continue;
 
     if (vp.mode === 'orbiting') {
-      // Smooth Lissajous-like orbit — cinematic, never stops.
-      const theta = time * 0.15 + Math.sin(time * 0.07) * 0.5;
-      const phi   = 0.3 + Math.sin(time * 0.11) * 0.25;
+      // User-controlled rotation via slider (cfg.camTheta)
+      const theta = cfg.camTheta;
+      const phi = 0.35;
       sphericalToPosition(theta, phi, radius, graphCenter, cfg.camHeight * (radius / cfg.camRadius));
       vp.camera.position.copy(_pos);
       vp.camera.lookAt(graphCenter);

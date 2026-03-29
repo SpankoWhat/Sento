@@ -77,6 +77,49 @@ canvas { display: block; }
     height: 1px;
     background: rgba(255, 255, 255, 0.06);
 }
+
+/* ─── Rotation slider (bottom of main viewport) ─────────────────────── */
+#rotation-slider-wrap {
+    position: fixed;
+    bottom: 12px;
+    left: 16px;
+    /* span the main viewport width (70%) minus some padding */
+    width: calc(69.5% - 32px);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    pointer-events: auto;
+}
+
+#rotation-slider {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.10);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+#rotation-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(140, 180, 255, 0.75);
+    border: none;
+    cursor: pointer;
+}
+
+#rotation-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(140, 180, 255, 0.75);
+    border: none;
+    cursor: pointer;
+}
 /* ─── Debug audio picker (only shown outside Wallpaper Engine) ─────────── */
 #audio-debug-picker {
     position: fixed;
