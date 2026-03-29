@@ -11,7 +11,7 @@ export const cfg = {
   colorMode: 'dynamic',
   colorMix: 0.35,
   accentColor: [0.20, 0.72, 1.0],
-  fogDensity: 0.018,
+  fogDensity: 0.008,
   energySensitivity: 1.0,
   mappingMode: 'latent',
   xFeature: 'brightness',

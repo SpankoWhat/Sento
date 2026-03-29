@@ -3,7 +3,6 @@ import { history } from './audio.js';
 import { 
   THREE, 
   scene, 
-  camera, 
   renderer, 
   instancedMesh, 
   instanceColors, 
@@ -11,14 +10,60 @@ import {
   trailLineGeo, 
   trailLinePositions 
 } from './scene.js';
-import { mouseState, updateMouse } from './controls.js';
+import { updateViewportCameras, renderAllViewports } from './viewport-manager.js';
+
+// ─── Coordinate HUD ─────────────────────────────────────────────────────────
+// Shows the most recent N data-point coordinates as a trailing readout on the
+// main viewport. Newest row is reddish, older rows fade to soft grey.
+const HUD_ROWS = 64;
+const hudEl = document.getElementById('coord-hud');
+const hudRows = [];
+
+function initHud() {
+  if (!hudEl) return;
+  for (let i = 0; i < HUD_ROWS; i++) {
+    const span = document.createElement('span');
+    span.className = 'coord-row';
+    hudEl.appendChild(span);
+    hudRows.push(span);
+  }
+}
+initHud();
+
+// Pre-compute row colours: index 0 = newest (reddish), last = faded grey
+function hudRowColor(age) {
+  // age: 0 = newest, 1 = oldest visible
+  const r = Math.round(180 - age * 110);   // 180 → 70
+  const g = Math.round(70 - age * 30);    // 70  → 40
+  const b = Math.round(70 - age * 30);    // 70  → 40
+  const a = (1 - age * 0.7).toFixed(2);    // 1.0 → 0.3
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function updateHud() {
+  if (!hudEl || history.length === 0) return;
+
+  const n = Math.min(HUD_ROWS, history.length);
+  for (let i = 0; i < HUD_ROWS; i++) {
+    const row = hudRows[i];
+    if (i >= n) {
+      row.textContent = '';
+      continue;
+    }
+    // Read from newest (end of history) backwards
+    const p = history[history.length - 1 - i];
+    const age = i / (HUD_ROWS - 1);
+    row.style.color = hudRowColor(age);
+    row.textContent = `${p.x.toFixed(2).padStart(7)}  ${p.y.toFixed(2).padStart(7)}  ${p.z.toFixed(2).padStart(7)}`;
+  }
+}
 
 // ─── Update instanced mesh ──────────────────────────────────────────────────
 const dummy = new THREE.Object3D();
 const _col = new THREE.Color();
 const _accent = new THREE.Color();
 const _mix = new THREE.Color();
-const graphCenter = new THREE.Vector3(0, 0, 0);
+export const graphCenter = new THREE.Vector3(0, 0, 0);
 const accentHsl = { h: 0, s: 0, l: 0 };
 
 function clamp01(value) {
@@ -115,9 +160,19 @@ function updateMesh() {
     const targetCx = cx / totalWeight;
     const targetCy = cy / totalWeight;
     const targetCz = cz / totalWeight;
-    graphCenter.x += (targetCx - graphCenter.x) * 0.05;
-    graphCenter.y += (targetCy - graphCenter.y) * 0.05;
-    graphCenter.z += (targetCz - graphCenter.z) * 0.05;
+
+    // Adaptive smoothing: track fast when graphCenter lags far behind the
+    // data centroid (prevents frustum clipping after abrupt audio changes),
+    // but stay smooth when close (avoids jitter during steady playback).
+    const dx = targetCx - graphCenter.x;
+    const dy = targetCy - graphCenter.y;
+    const dz = targetCz - graphCenter.z;
+    const lag = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const alpha = Math.min(0.25, 0.05 + lag * 0.015);
+
+    graphCenter.x += dx * alpha;
+    graphCenter.y += dy * alpha;
+    graphCenter.z += dz * alpha;
   }
 
   instancedMesh.instanceMatrix.needsUpdate = true;
@@ -129,24 +184,16 @@ function updateMesh() {
 }
 
 // ─── Render loop ────────────────────────────────────────────────────────────
+// ─── Render loop ────────────────────────────────────────────────────────────
+let hudTick = 0;
+
 export function animate() {
   requestAnimationFrame(animate);
-
-  const idleTime = Date.now() - mouseState.lastMove;
-  if (cfg.autoRotate && idleTime > 3000) {
-    mouseState.autoAngle += cfg.autoRotateSpeed * 0.01;
-    mouseState.targetX = Math.sin(mouseState.autoAngle) * 0.8;
-    mouseState.targetY = 0.2 + Math.sin(mouseState.autoAngle * 0.3) * 0.3;
-  }
-
-  updateMouse();
-
-  const angle = mouseState.x * Math.PI;
-  camera.position.x = graphCenter.x + Math.sin(angle) * cfg.camRadius;
-  camera.position.z = graphCenter.z + Math.cos(angle) * cfg.camRadius;
-  camera.position.y = graphCenter.y + cfg.camHeight - mouseState.y * 6;
-  camera.lookAt(graphCenter);
-
+  const time = performance.now() * 0.001;
   updateMesh();
-  renderer.render(scene, camera);
+  updateViewportCameras(graphCenter, time);
+  renderAllViewports(renderer, scene);
+
+  // Update the coordinate HUD every 3 frames to avoid layout thrashing
+  if (++hudTick % 3 === 0) updateHud();
 }

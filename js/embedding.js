@@ -209,8 +209,9 @@ function deriveState(raw) {
   // Presence — how strongly the sound is asserting itself right now.
   // A mix of raw loudness (energy, scaled by user sensitivity) and impact (transient).
   // Think of it as "how much is the sound filling the space at this moment". Range: [0, 1].
+  // Capped at 1.0 so high energySensitivity doesn't push coordinates beyond the spatial bounds.
   const presence = clamp01(
-    features.energy * cfg.energySensitivity * 1.25 +
+    features.energy * Math.min(cfg.energySensitivity, 2.5) * 1.25 +
     transient * 0.35
   );
 

@@ -6,13 +6,11 @@ export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050508);
 scene.fog = new THREE.FogExp2(0x050508, cfg.fogDensity);
 
-export const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 300);
-camera.position.set(cfg.camRadius, cfg.camHeight, 0);
-
 export const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-document.body.appendChild(renderer.domElement);
+renderer.autoClear = false;
+document.getElementById('viewport-container').appendChild(renderer.domElement);
 
 // ─── Instanced spheres for performance ──────────────────────────────────────
 const sphereGeo = new THREE.SphereGeometry(1, 16, 12);
@@ -66,8 +64,6 @@ applySceneStyles();
 
 // ─── Resize handler ─────────────────────────────────────────────────────────
 window.addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
 

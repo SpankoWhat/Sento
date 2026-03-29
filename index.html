@@ -6,6 +6,19 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <!-- Viewport container (holds the single Three.js canvas) -->
+  <div id="viewport-container"></div>
+  
+  <!-- Raw coordinate HUD (main viewport only) -->
+  <div id="coord-hud"></div>
+  
+  <!-- Subtle grid lines separating the 4 viewports -->
+  <div id="viewport-grid">
+    <div class="vp-line-v"></div>
+    <div class="vp-line-h1"></div>
+    <div class="vp-line-h2"></div>
+  </div>
+
   <!-- Audio callback bridge - must be non-module for WE to detect it -->
   <script>
     // This array will be filled by Wallpaper Engine

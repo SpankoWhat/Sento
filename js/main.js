@@ -4,6 +4,7 @@ import './config.js';
 import './scene.js';
 import './controls.js';
 import { startWallpaperEngine, startMicCapture, startFilePlayback, startDemo } from './audio.js';
+import { createDebugPanel } from './debug-panel.js';
 import { animate } from './visualizer.js';
 
 // ─── Audio source selection ─────────────────────────────────────────────────
@@ -23,6 +24,9 @@ if (typeof window.wallpaperRegisterAudioListener !== 'undefined') {
     <button id="demo-btn" title="Run procedural demo">▶ Demo</button>
   `;
   document.body.appendChild(picker);
+
+  // Show debug config panel alongside the audio picker
+  createDebugPanel();
 
   // File input
   picker.querySelector('#audio-file').addEventListener('change', (e) => {
