@@ -1,5 +1,5 @@
 import { cfg } from './config.js';
-import { history } from './audio.js';
+import { bandHistories } from './audio.js';
 import { applySceneStyles, scene } from './scene.js';
 
 // ─── Debug Panel ────────────────────────────────────────────────────────────
@@ -8,27 +8,20 @@ import { applySceneStyles, scene } from './scene.js';
 
 // Map from WE property key → cfg key  (only where they differ)
 const keyMap = {
+  maxbin: 'maxBin',
+  bandcount: 'bandCount',
   traillength:      'trailLength',
-  spheresize:       'sphereSize',
-  lineopacity:      'lineOpacity',
+  pointsize: 'pointSize',
+  pointopacity: 'pointOpacity',
   colorsaturation:  'colorSaturation',
-  colorhueshift:    'colorHueShift',
-  colormode:        'colorMode',
-  colormix:         'colorMix',
-  accentcolor:      'accentColor',
+  colorhuelow: 'colorHueLow',
+  colorhuehigh: 'colorHueHigh',
+  colorhueshift: 'colorHueShift',
   fogdensity:       'fogDensity',
   spacescale:       'spaceScale',
-  energysensitivity:'energySensitivity',
-  mappingmode:      'mappingMode',
-  xfeature:         'xFeature',
-  yfeature:         'yFeature',
-  zfeature:         'zFeature',
-  xemphasis:        'xEmphasis',
-  yemphasis:        'yEmphasis',
-  zemphasis:        'zEmphasis',
-  glowintensity:    'glowIntensity',
-  breathingamount:  'breathingAmount',
-  pulseamount:      'pulseAmount',
+  bandspacing: 'bandSpacing',
+  energysensitivity: 'energySensitivity',
+  glowintensity: 'glowIntensity',
   cameradistance:   'camRadius',
   cameraheight:     'camHeight',
   autorotate:       'autoRotate',
@@ -39,9 +32,11 @@ const keyMap = {
 function applySideEffects(weKey) {
   switch (weKey) {
     case 'traillength':
-      while (history.length > cfg.trailLength) history.shift();
+      for (const hist of bandHistories) {
+        while (hist.length > cfg.trailLength) hist.shift();
+      }
       break;
-    case 'lineopacity':
+    case 'fogdensity':
     case 'glowintensity':
       applySceneStyles();
       break;
@@ -51,9 +46,6 @@ function applySideEffects(weKey) {
       scene.fog.color.setRGB(rgb[0], rgb[1], rgb[2]);
       break;
     }
-    case 'fogdensity':
-      scene.fog.density = cfg.fogDensity;
-      break;
   }
 }
 

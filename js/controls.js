@@ -1,5 +1,5 @@
 import { cfg } from './config.js';
-import { history } from './audio.js';
+import { bandHistories } from './audio.js';
 import { applySceneStyles, scene } from './scene.js';
 
 // ─── Mouse-controlled camera state ──────────────────────────────────────────
@@ -40,14 +40,21 @@ window.wallpaperPropertyListener = {
   applyUserProperties: function(properties) {
     if (properties.traillength) {
       cfg.trailLength = properties.traillength.value;
-      while (history.length > cfg.trailLength) history.shift();
+        for (const hist of bandHistories) {
+            while (hist.length > cfg.trailLength) hist.shift();
+        }
     }
-    if (properties.spheresize) {
-      cfg.sphereSize = properties.spheresize.value;
-    }
-    if (properties.lineopacity) {
-      cfg.lineOpacity = properties.lineopacity.value;
-      applySceneStyles();
+        if (properties.maxbin) {
+            cfg.maxBin = properties.maxbin.value;
+        }
+        if (properties.bandcount) {
+            cfg.bandCount = properties.bandcount.value;
+        }
+        if (properties.pointsize) {
+            cfg.pointSize = properties.pointsize.value;
+        }
+        if (properties.pointopacity) {
+            cfg.pointOpacity = properties.pointopacity.value;
     }
     if (properties.colorsaturation) {
       cfg.colorSaturation = properties.colorsaturation.value;
@@ -55,14 +62,11 @@ window.wallpaperPropertyListener = {
     if (properties.colorhueshift) {
       cfg.colorHueShift = properties.colorhueshift.value;
     }
-    if (properties.colormode) {
-      cfg.colorMode = properties.colormode.value;
+        if (properties.colorhuelow) {
+            cfg.colorHueLow = properties.colorhuelow.value;
     }
-    if (properties.colormix) {
-      cfg.colorMix = properties.colormix.value;
-    }
-    if (properties.accentcolor) {
-      cfg.accentColor = parseRgbTriplet(properties.accentcolor.value);
+        if (properties.colorhuehigh) {
+            cfg.colorHueHigh = properties.colorhuehigh.value;
     }
     if (properties.backgroundcolor) {
       const rgb = parseRgbTriplet(properties.backgroundcolor.value);
@@ -71,44 +75,19 @@ window.wallpaperPropertyListener = {
     }
     if (properties.fogdensity) {
       cfg.fogDensity = properties.fogdensity.value;
-      scene.fog.density = cfg.fogDensity;
+        applySceneStyles();
     }
     if (properties.spacescale) {
       cfg.spaceScale = properties.spacescale.value;
     }
+        if (properties.bandspacing) {
+            cfg.bandSpacing = properties.bandspacing.value;
+        }
     if (properties.energysensitivity) {
       cfg.energySensitivity = properties.energysensitivity.value;
     }
-    if (properties.mappingmode) {
-      cfg.mappingMode = properties.mappingmode.value;
-    }
-    if (properties.xfeature) {
-      cfg.xFeature = properties.xfeature.value;
-    }
-    if (properties.yfeature) {
-      cfg.yFeature = properties.yfeature.value;
-    }
-    if (properties.zfeature) {
-      cfg.zFeature = properties.zfeature.value;
-    }
-    if (properties.xemphasis) {
-      cfg.xEmphasis = properties.xemphasis.value;
-    }
-    if (properties.yemphasis) {
-      cfg.yEmphasis = properties.yemphasis.value;
-    }
-    if (properties.zemphasis) {
-      cfg.zEmphasis = properties.zemphasis.value;
-    }
     if (properties.glowintensity) {
-      cfg.glowIntensity = properties.glowintensity.value;
-      applySceneStyles();
-    }
-    if (properties.breathingamount) {
-      cfg.breathingAmount = properties.breathingamount.value;
-    }
-    if (properties.pulseamount) {
-      cfg.pulseAmount = properties.pulseamount.value;
+        cfg.glowIntensity = properties.glowintensity.value;
     }
     if (properties.cameradistance) {
       cfg.camRadius = properties.cameradistance.value;

@@ -1,15 +1,43 @@
 import { cfg } from './config.js';
-import { createEmbeddingPoint } from './embedding.js';
+import { createBandPoint } from './embedding.js';
 
-// ─── Audio history ──────────────────────────────────────────────────────────
-// Each point stores a 3D latent embedding plus render metadata.
-export const history = [];
+// ─── Per-band histories ─────────────────────────────────────────────────────
+// bandHistories[b] is an array of points for frequency band b.
+// The visualizer reads these in parallel.
+export const bandHistories = [];
+
+function ensureBands() {
+  while (bandHistories.length < cfg.bandCount) bandHistories.push([]);
+  // Trim excess bands if bandCount decreased at runtime
+  bandHistories.length = cfg.bandCount;
+}
 
 // ─── Audio callback ─────────────────────────────────────────────────────────
 export function onAudioData(raw) {
-  const point = createEmbeddingPoint(raw);
-  history.push(point);
-  if (history.length > cfg.trailLength) history.shift();
+  ensureBands();
+
+  // Decode left+right → mono bins, then trim to maxBin
+  const BINS = 64;
+  const mono = new Float32Array(cfg.maxBin);
+  const half = raw.length >= BINS * 2;
+  for (let i = 0; i < cfg.maxBin; i++) {
+    const l = Math.max(0, Number(raw[i]) || 0);
+    const r = half ? Math.max(0, Number(raw[i + BINS]) || 0) : l;
+    mono[i] = (l + r) * 0.5;
+  }
+
+  // Split kept bins evenly across bands
+  const binsPerBand = Math.floor(cfg.maxBin / cfg.bandCount);
+
+  for (let b = 0; b < cfg.bandCount; b++) {
+    const start = b * binsPerBand;
+    const end = (b === cfg.bandCount - 1) ? cfg.maxBin : start + binsPerBand;
+    const bandBins = mono.subarray(start, end);
+
+    const point = createBandPoint(bandBins, b);
+    bandHistories[b].push(point);
+    if (bandHistories[b].length > cfg.trailLength) bandHistories[b].shift();
+  }
 }
 
 // ─── Shared analyser setup ──────────────────────────────────────────────────

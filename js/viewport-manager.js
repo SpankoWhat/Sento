@@ -115,12 +115,11 @@ function sphericalToPosition(theta, phi, radius, centre, heightOffset) {
  * @param {number}        time         Elapsed time in seconds (e.g. performance.now() * 0.001)
  */
 export function updateViewportCameras(graphCenter, time) {
-  // Scale camera radius with spaceScale so the frustum always covers the data.
-  // With FOV 50°, tan(25°) ≈ 0.466 → half-width at distance d = 0.466d.
-  // Data extends ±spaceScale*1.3 on the widest axis (Y). To keep that in view:
-  //   0.466 * radius ≥ spaceScale * 1.3  →  radius ≥ spaceScale * 2.8
-  // We use cfg.camRadius as a user-controlled base, but enforce a floor.
-  const minRadius = cfg.spaceScale * 2.8;
+  // Scale camera radius to cover all bands.  With multiple bands spread
+  // along X, the total width is roughly spaceScale*2 + bandSpacing*(bandCount-1).
+  // FOV 50° → tan(25°) ≈ 0.466 → half-width at d = 0.466d.
+  const totalWidth = cfg.spaceScale * 2 + cfg.bandSpacing * Math.max(0, (cfg.bandCount ?? 3) - 1);
+  const minRadius = (totalWidth / 0.466) * 0.55;
   const radius = Math.max(cfg.camRadius, minRadius);
 
   for (const vp of viewports) {
