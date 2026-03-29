@@ -16,7 +16,13 @@ document.body.appendChild(renderer.domElement);
 
 // ─── Instanced spheres for performance ──────────────────────────────────────
 const sphereGeo = new THREE.SphereGeometry(1, 16, 12);
-const sphereMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+export const sphereMat = new THREE.MeshBasicMaterial({
+  color: 0xffffff,
+  transparent: true,
+  opacity: 0.72,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+});
 
 export const instancedMesh = new THREE.InstancedMesh(sphereGeo, sphereMat, MAX_SPHERES);
 instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -41,6 +47,22 @@ export const trailLineMat = new THREE.LineBasicMaterial({
 
 const trailLine = new THREE.Line(trailLineGeo, trailLineMat);
 scene.add(trailLine);
+
+export function applySceneStyles() {
+  const glow = Math.max(0, cfg.glowIntensity);
+  const useAdditive = glow > 0.05;
+
+  sphereMat.opacity = Math.min(1, 0.28 + glow * 0.42);
+  sphereMat.blending = useAdditive ? THREE.AdditiveBlending : THREE.NormalBlending;
+  sphereMat.depthWrite = !useAdditive;
+  sphereMat.needsUpdate = true;
+
+  trailLineMat.opacity = Math.min(1, cfg.lineOpacity * (0.8 + glow * 0.55));
+  trailLineMat.blending = useAdditive ? THREE.AdditiveBlending : THREE.NormalBlending;
+  trailLineMat.needsUpdate = true;
+}
+
+applySceneStyles();
 
 // ─── Resize handler ─────────────────────────────────────────────────────────
 window.addEventListener('resize', () => {

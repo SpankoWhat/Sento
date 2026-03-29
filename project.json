@@ -2,7 +2,7 @@
     "file": "index.html",
     "preview": "preview.jpg",
     "title": "Sento",
-    "description": "Real-time 3D audio visualizer — embeds timbre, intensity, and texture into a latent spatial trail.",
+    "description": "Real-time 3D audio visualizer with classic and custom latent mappings, feature emphasis, and reactive color and glow controls.",
     "type": "web",
     "audioprocessing": true,
     "general": {
@@ -40,6 +40,26 @@
                 "max": 1.0,
                 "step": 0.1
             },
+            "colormode": {
+                "text": "Color Mode",
+                "type": "combo",
+                "value": "dynamic",
+                "options": [
+                    { "label": "Dynamic", "value": "dynamic" },
+                    { "label": "Accent", "value": "accent" },
+                    { "label": "Hybrid", "value": "hybrid" },
+                    { "label": "Stereo", "value": "stereo" }
+                ]
+            },
+            "colormix": {
+                "text": "Accent Mix",
+                "type": "slider",
+                "value": 0.35,
+                "min": 0.0,
+                "max": 1.0,
+                "step": 0.05,
+                "condition": "colormode.value == 'hybrid'"
+            },
             "colorhueshift": {
                 "text": "Color Hue Shift",
                 "type": "slider",
@@ -47,6 +67,12 @@
                 "min": 0.0,
                 "max": 1.0,
                 "step": 0.1
+            },
+            "accentcolor": {
+                "text": "Accent Color",
+                "type": "color",
+                "value": "0.20 0.72 1.0",
+                "condition": "colormode.value == 'accent' || colormode.value == 'hybrid'"
             },
             "backgroundcolor": {
                 "text": "Background Color",
@@ -76,6 +102,130 @@
                 "min": 0.3,
                 "max": 3.0,
                 "step": 0.1
+            },
+            "mappingmode": {
+                "text": "Space Mapping",
+                "type": "combo",
+                "value": "latent",
+                "options": [
+                    { "label": "Latent", "value": "latent" },
+                    { "label": "Classic", "value": "classic" },
+                    { "label": "Custom", "value": "custom" }
+                ]
+            },
+            "xfeature": {
+                "text": "X Axis Feature",
+                "type": "combo",
+                "value": "brightness",
+                "condition": "mappingmode.value == 'custom'",
+                "options": [
+                    { "label": "Brightness", "value": "brightness" },
+                    { "label": "Presence", "value": "presence" },
+                    { "label": "Texture", "value": "texture" },
+                    { "label": "Stereo Balance", "value": "balance" },
+                    { "label": "Stereo Width", "value": "width" },
+                    { "label": "Transient", "value": "transient" },
+                    { "label": "Centroid", "value": "centroid" },
+                    { "label": "Spread", "value": "spread" },
+                    { "label": "Flatness", "value": "flatness" },
+                    { "label": "Bass", "value": "low" },
+                    { "label": "Mids", "value": "mid" },
+                    { "label": "Treble", "value": "high" },
+                    { "label": "Rolloff", "value": "rolloff" }
+                ]
+            },
+            "yfeature": {
+                "text": "Y Axis Feature",
+                "type": "combo",
+                "value": "presence",
+                "condition": "mappingmode.value == 'custom'",
+                "options": [
+                    { "label": "Brightness", "value": "brightness" },
+                    { "label": "Presence", "value": "presence" },
+                    { "label": "Texture", "value": "texture" },
+                    { "label": "Stereo Balance", "value": "balance" },
+                    { "label": "Stereo Width", "value": "width" },
+                    { "label": "Transient", "value": "transient" },
+                    { "label": "Centroid", "value": "centroid" },
+                    { "label": "Spread", "value": "spread" },
+                    { "label": "Flatness", "value": "flatness" },
+                    { "label": "Bass", "value": "low" },
+                    { "label": "Mids", "value": "mid" },
+                    { "label": "Treble", "value": "high" },
+                    { "label": "Rolloff", "value": "rolloff" }
+                ]
+            },
+            "zfeature": {
+                "text": "Z Axis Feature",
+                "type": "combo",
+                "value": "texture",
+                "condition": "mappingmode.value == 'custom'",
+                "options": [
+                    { "label": "Brightness", "value": "brightness" },
+                    { "label": "Presence", "value": "presence" },
+                    { "label": "Texture", "value": "texture" },
+                    { "label": "Stereo Balance", "value": "balance" },
+                    { "label": "Stereo Width", "value": "width" },
+                    { "label": "Transient", "value": "transient" },
+                    { "label": "Centroid", "value": "centroid" },
+                    { "label": "Spread", "value": "spread" },
+                    { "label": "Flatness", "value": "flatness" },
+                    { "label": "Bass", "value": "low" },
+                    { "label": "Mids", "value": "mid" },
+                    { "label": "Treble", "value": "high" },
+                    { "label": "Rolloff", "value": "rolloff" }
+                ]
+            },
+            "xemphasis": {
+                "text": "X Emphasis",
+                "type": "slider",
+                "value": 1.0,
+                "min": 0.2,
+                "max": 2.5,
+                "step": 0.1,
+                "condition": "mappingmode.value == 'custom'"
+            },
+            "yemphasis": {
+                "text": "Y Emphasis",
+                "type": "slider",
+                "value": 1.0,
+                "min": 0.2,
+                "max": 2.5,
+                "step": 0.1,
+                "condition": "mappingmode.value == 'custom'"
+            },
+            "zemphasis": {
+                "text": "Z Emphasis",
+                "type": "slider",
+                "value": 1.0,
+                "min": 0.2,
+                "max": 2.5,
+                "step": 0.1,
+                "condition": "mappingmode.value == 'custom'"
+            },
+            "glowintensity": {
+                "text": "Glow Intensity",
+                "type": "slider",
+                "value": 0.7,
+                "min": 0.0,
+                "max": 2.0,
+                "step": 0.1
+            },
+            "breathingamount": {
+                "text": "Breathing",
+                "type": "slider",
+                "value": 0.18,
+                "min": 0.0,
+                "max": 1.0,
+                "step": 0.05
+            },
+            "pulseamount": {
+                "text": "Pulsing",
+                "type": "slider",
+                "value": 0.45,
+                "min": 0.0,
+                "max": 1.0,
+                "step": 0.05
             },
             "cameradistance": {
                 "text": "Camera Distance",

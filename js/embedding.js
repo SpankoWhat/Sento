@@ -17,6 +17,10 @@ function clampSigned(value) {
   return clamp(value, -1, 1);
 }
 
+function wrap01(value) {
+  return ((value % 1) + 1) % 1;
+}
+
 function decodeStereoSpectrum(raw) {
   const left = new Float32Array(BINS_PER_CHANNEL);
   const right = new Float32Array(BINS_PER_CHANNEL);
@@ -138,9 +142,11 @@ function extractEmbeddingFeatures(raw) {
   };
 }
 
-// This is an artistic 3D latent space, not physical source localization.
-// Axes represent timbre, intensity, and texture/spatial spread.
-export function createEmbeddingPoint(raw) {
+function toCentered(value) {
+  return clampSigned(value * 2 - 1);
+}
+
+function deriveState(raw) {
   const features = extractEmbeddingFeatures(raw);
 
   const brightness = clampSigned(
@@ -166,23 +172,100 @@ export function createEmbeddingPoint(raw) {
     transient * 0.35
   );
 
-  const targetX = clampSigned(brightness * 0.82 + features.balance * 0.35) * cfg.spaceScale;
-  const targetY = clampSigned(-0.45 + presence * 1.5 + transient * 0.2) * cfg.spaceScale * 1.3;
-  const targetZ = clampSigned(texture * 0.75 + features.width * 0.4 + features.balance * 0.15) * cfg.spaceScale;
+  return {
+    ...features,
+    brightness,
+    texture,
+    transient,
+    presence,
+    centroidSigned: clampSigned((features.centroid - 0.5) * 2),
+    spreadSigned: clampSigned((features.spread - 0.18) * 5),
+    rolloffSigned: clampSigned((features.rolloff - 0.5) * 2),
+    flatnessSigned: clampSigned((features.flatness - 0.28) * 3),
+    widthSigned: toCentered(features.width),
+    presenceSigned: toCentered(presence),
+    transientSigned: toCentered(transient),
+    lowSigned: clampSigned((features.lowRatio - 0.34) * 3.2),
+    midSigned: clampSigned((features.midRatio - 0.38) * 3.2),
+    highSigned: clampSigned((features.highRatio - 0.28) * 3.2),
+  };
+}
 
-  const x = prevPoint.x + (targetX - prevPoint.x) * 0.32;
-  const y = prevPoint.y + (targetY - prevPoint.y) * 0.28;
-  const z = prevPoint.z + (targetZ - prevPoint.z) * 0.32;
+function resolveCustomFeatureValue(feature, state) {
+  switch (feature) {
+    case 'presence':
+      return state.presenceSigned;
+    case 'texture':
+      return state.texture;
+    case 'balance':
+      return state.balance;
+    case 'width':
+      return state.widthSigned;
+    case 'transient':
+      return state.transientSigned;
+    case 'centroid':
+      return state.centroidSigned;
+    case 'spread':
+      return state.spreadSigned;
+    case 'flatness':
+      return state.flatnessSigned;
+    case 'low':
+      return state.lowSigned;
+    case 'mid':
+      return state.midSigned;
+    case 'high':
+      return state.highSigned;
+    case 'rolloff':
+      return state.rolloffSigned;
+    case 'brightness':
+    default:
+      return state.brightness;
+  }
+}
 
-  const size = 0.07 + presence * 0.42 + transient * 0.18 + features.width * 0.08;
-  const hue = clamp01(0.03 + ((brightness + 1) * 0.5) * 0.62 + features.width * 0.05);
-  const saturation = clamp01(0.5 + features.width * 0.25 + transient * 0.2 + features.flatness * 0.15);
-  const lightness = clamp01(0.22 + presence * 0.38 + transient * 0.15);
+function computeTargets(state) {
+  if (cfg.mappingMode === 'classic') {
+    return {
+      x: (state.centroid - 0.5) * 2 * cfg.spaceScale,
+      y: state.presence * cfg.spaceScale * 1.5,
+      z: (state.spread - 0.15) * 4 * cfg.spaceScale,
+    };
+  }
+
+  if (cfg.mappingMode === 'custom') {
+    return {
+      x: resolveCustomFeatureValue(cfg.xFeature, state) * cfg.spaceScale * cfg.xEmphasis,
+      y: resolveCustomFeatureValue(cfg.yFeature, state) * cfg.spaceScale * 1.3 * cfg.yEmphasis,
+      z: resolveCustomFeatureValue(cfg.zFeature, state) * cfg.spaceScale * cfg.zEmphasis,
+    };
+  }
+
+  return {
+    x: clampSigned(state.brightness * 0.82 + state.balance * 0.35) * cfg.spaceScale,
+    y: clampSigned(-0.45 + state.presence * 1.5 + state.transient * 0.2) * cfg.spaceScale * 1.3,
+    z: clampSigned(state.texture * 0.75 + state.width * 0.4 + state.balance * 0.15) * cfg.spaceScale,
+  };
+}
+
+// This is an artistic 3D latent space, not physical source localization.
+// Axes represent timbre, intensity, and texture/spatial spread.
+export function createEmbeddingPoint(raw) {
+  const state = deriveState(raw);
+  const targets = computeTargets(state);
+
+  const x = prevPoint.x + (targets.x - prevPoint.x) * 0.32;
+  const y = prevPoint.y + (targets.y - prevPoint.y) * 0.28;
+  const z = prevPoint.z + (targets.z - prevPoint.z) * 0.32;
+
+  const size = 0.07 + state.presence * 0.42 + state.transient * 0.18 + state.width * 0.08;
+  const hue = wrap01(0.03 + ((state.brightness + 1) * 0.5) * 0.62 + state.width * 0.05);
+  const saturation = clamp01(0.5 + state.width * 0.25 + state.transient * 0.2 + state.flatness * 0.15);
+  const lightness = clamp01(0.22 + state.presence * 0.38 + state.transient * 0.15);
 
   prevPoint.x = x;
   prevPoint.y = y;
   prevPoint.z = z;
-  prevPoint.energy = features.energy;
+  prevPoint.energy = state.energy;
 
   return {
     x,
@@ -192,10 +275,12 @@ export function createEmbeddingPoint(raw) {
     hue,
     saturation,
     lightness,
-    energy: presence,
-    transient,
-    brightness,
-    texture,
-    width: features.width,
+    energy: state.presence,
+    transient: state.transient,
+    brightness: state.brightness,
+    texture: state.texture,
+    width: state.width,
+    balance: state.balance,
+    centroid: state.centroid,
   };
 }
