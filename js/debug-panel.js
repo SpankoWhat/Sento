@@ -17,7 +17,6 @@ const keyMap = {
   colorhuelow: 'colorHueLow',
   colorhuehigh: 'colorHueHigh',
   colorhueshift: 'colorHueShift',
-  fogdensity:       'fogDensity',
   spacescale:       'spaceScale',
   bandspacing: 'bandSpacing',
   energysensitivity: 'energySensitivity',
@@ -35,14 +34,12 @@ function applySideEffects(weKey) {
         while (hist.length > cfg.trailLength) hist.shift();
       }
       break;
-    case 'fogdensity':
     case 'glowintensity':
       applySceneStyles();
       break;
     case 'backgroundcolor': {
       const rgb = cfg._bgColor ?? [0.02, 0.02, 0.03];
       scene.background.setRGB(rgb[0], rgb[1], rgb[2]);
-      scene.fog.color.setRGB(rgb[0], rgb[1], rgb[2]);
       break;
     }
   }

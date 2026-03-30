@@ -68,10 +68,16 @@ function extractBandFeatures(bins, bandState) {
     const flatness = arithMean > EPS ? Math.exp(geoSum / N) / arithMean : 0;
     const flux = clamp01((fluxSum / N) * 6);
 
+    // Spectral crest — peak amplitude / mean amplitude.
+    // High = one dominant frequency (tonal / focused), low = energy spread evenly (noisy / diffuse).
+    let peakBin = 0;
+    for (let i = 0; i < N; i++) { if (bins[i] > peakBin) peakBin = bins[i]; }
+    const crest = arithMean > EPS ? peakBin / arithMean : 1;
+
     // Save for next frame
     for (let i = 0; i < N; i++) bandState.prevMono[i] = bins[i];
 
-    return { energy, centroid, spread, rolloff, flatness, flux, ampSum, N };
+    return { energy, centroid, spread, rolloff, flatness, flux, crest, ampSum, N };
 }
 
 // ─── Higher-level descriptors ───────────────────────────────────────────────
@@ -81,10 +87,10 @@ function deriveDescriptors(feat, bandState) {
       (feat.rolloff - 0.5) * 1.0
   );
 
-  const texture = clampSigned(
-      (feat.flatness - 0.28) * 2.0 +
-      (feat.spread - 0.18) * 2.6
-  );
+    // Crest: normalize from raw ratio (typically 1–N) into [-1, 1].
+    // A perfectly flat spectrum has crest = 1, a single-bin spike has crest = N.
+    // We map: 1 → −1 (diffuse), ~4+ → +1 (tonal/focused).
+    const crestNorm = clampSigned((feat.crest - 2.5) * 0.65);
 
   const transient = clamp01(
       Math.max(0, feat.energy - bandState.prevEnergy) * 3.5 +
@@ -98,7 +104,7 @@ function deriveDescriptors(feat, bandState) {
 
     bandState.prevEnergy = feat.energy;
 
-    return { brightness, texture, transient, presence, energy: feat.energy };
+    return { brightness, crest: crestNorm, transient, presence, energy: feat.energy };
 }
 
 // ─── Coordinate mapping (per-band) ─────────────────────────────────────────
@@ -107,7 +113,7 @@ function computeCoords(desc) {
     return {
         x: clampSigned(desc.brightness * 0.85) * S,
         y: clampSigned(-0.4 + desc.presence * 1.6 + desc.transient * 0.2) * S * 1.3,
-        z: clampSigned(desc.texture * 0.75) * S,
+        z: desc.crest * S,
     };
 }
 

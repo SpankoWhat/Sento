@@ -33,9 +33,6 @@ export const cfg = {
   colorSaturation: 0.85,
   colorHueShift: 0.0,
 
-  // ── Fog ──────────────────────────────────────────────────────────────────
-  fogDensity: 0.006,
-
   // ── Energy ───────────────────────────────────────────────────────────────
   energySensitivity: 1.0,
 

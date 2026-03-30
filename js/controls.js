@@ -71,11 +71,6 @@ window.wallpaperPropertyListener = {
     if (properties.backgroundcolor) {
       const rgb = parseRgbTriplet(properties.backgroundcolor.value);
       scene.background.setRGB(rgb[0], rgb[1], rgb[2]);
-      scene.fog.color.setRGB(rgb[0], rgb[1], rgb[2]);
-    }
-    if (properties.fogdensity) {
-      cfg.fogDensity = properties.fogdensity.value;
-        applySceneStyles();
     }
     if (properties.spacescale) {
       cfg.spaceScale = properties.spacescale.value;

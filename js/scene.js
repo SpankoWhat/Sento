@@ -4,7 +4,6 @@ import { cfg, MAX_POINTS } from './config.js';
 // ─── Scene ──────────────────────────────────────────────────────────────────
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050508);
-scene.fog = new THREE.FogExp2(0x050508, cfg.fogDensity);
 
 export const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
@@ -85,8 +84,6 @@ export { THREE, geometry, positions, colors, sizes, alphas };
 
 // ─── Scene style helpers ────────────────────────────────────────────────────
 export function applySceneStyles() {
-    // Called after config changes that affect fog or material
-    scene.fog.density = cfg.fogDensity;
     material.uniforms.uPixelRatio.value = Math.min(devicePixelRatio, 2);
 }
 
