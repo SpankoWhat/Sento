@@ -6,6 +6,9 @@ import { createBandPoint } from './embedding.js';
 // The visualizer reads these in parallel.
 export const bandHistories = [];
 
+// Latest full 64-bin mono spectrum (before maxBin trim) for the spectrum HUD.
+export const latestSpectrum = new Float32Array(64);
+
 function ensureBands() {
   while (bandHistories.length < cfg.bandCount) bandHistories.push([]);
   // Trim excess bands if bandCount decreased at runtime
@@ -24,6 +27,13 @@ export function onAudioData(raw) {
     const l = Math.max(0, Number(raw[i]) || 0);
     const r = half ? Math.max(0, Number(raw[i + BINS]) || 0) : l;
     mono[i] = (l + r) * 0.5;
+  }
+
+  // Also store the full 64-bin spectrum for the spectrum HUD
+  for (let i = 0; i < BINS; i++) {
+    const l = Math.max(0, Number(raw[i]) || 0);
+    const r = half ? Math.max(0, Number(raw[i + BINS]) || 0) : l;
+    latestSpectrum[i] = (l + r) * 0.5;
   }
 
   // Split kept bins evenly across bands

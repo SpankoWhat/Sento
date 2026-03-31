@@ -12,31 +12,17 @@ canvas { display: block; }
     z-index: 0;
 }
 
-/* ─── Coordinate HUD (raw x y z readout on main viewport) ─────────────── */
-#coord-hud {
-    position: absolute;
-    top: 16px;
-    left: 16px;
-    z-index: 2;
+/* ─── Spectrum band HUD (top of main viewport) ───────────────────────── */
+#spectrum-hud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    /* span the main viewport width (70%) */
+    width: 69.5%;
+    height: 54px;
+    z-index: 5;
     pointer-events: none;
-    font-family: 'Consolas', 'SF Mono', 'Fira Code', monospace;
-    font-size: 11px;
-    line-height: 1.55;
-    letter-spacing: 0.03em;
-    white-space: pre;
-    max-width: 68%;
-    max-height: calc(100vh - 32px);
-    overflow: hidden;
-    /* Fade out at the bottom so trailing lines dissolve */
-    mask-image: linear-gradient(to bottom, #fff 40%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, #fff 40%, transparent 100%);
 }
-
-#coord-hud .coord-row {
-    display: block;
-    transition: color 0.3s ease, opacity 0.3s ease;
-}
-
 /* ─── Viewport grid overlay (subtle border lines between viewports) ────── */
 #viewport-grid {
     position: absolute;

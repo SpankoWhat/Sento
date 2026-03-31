@@ -11,47 +11,7 @@ import {
     alphas,
 } from './scene.js';
 import { updateViewportCameras, renderAllViewports } from './viewport-manager.js';
-
-// ─── Coordinate HUD ─────────────────────────────────────────────────────────
-const HUD_ROWS = 64;
-const hudEl = document.getElementById('coord-hud');
-const hudRows = [];
-
-function initHud() {
-  if (!hudEl) return;
-  for (let i = 0; i < HUD_ROWS; i++) {
-    const span = document.createElement('span');
-    span.className = 'coord-row';
-    hudEl.appendChild(span);
-    hudRows.push(span);
-  }
-}
-initHud();
-
-function hudRowColor(age) {
-    const r = Math.round(180 - age * 110);
-    const g = Math.round(70 - age * 30);
-    const b = Math.round(70 - age * 30);
-    const a = (1 - age * 0.7).toFixed(2);
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-function updateHud() {
-    if (!hudEl) return;
-    // Show the newest points from band 0 (or whichever is most recent)
-    const band0 = bandHistories[0];
-    if (!band0 || band0.length === 0) return;
-
-    const n = Math.min(HUD_ROWS, band0.length);
-  for (let i = 0; i < HUD_ROWS; i++) {
-    const row = hudRows[i];
-      if (i >= n) { row.textContent = ''; continue; }
-      const p = band0[band0.length - 1 - i];
-    const age = i / (HUD_ROWS - 1);
-    row.style.color = hudRowColor(age);
-    row.textContent = `${p.x.toFixed(2).padStart(7)}  ${p.y.toFixed(2).padStart(7)}  ${p.z.toFixed(2).padStart(7)}`;
-  }
-}
+import { drawSpectrumHud } from './spectrum-hud.js';
 
 // ─── Graph centre (for camera tracking) ─────────────────────────────────────
 export const graphCenter = new THREE.Vector3(0, 0, 0);
@@ -132,5 +92,7 @@ export function animate() {
   updateViewportCameras(graphCenter, time);
   renderAllViewports(renderer, scene);
 
-  if (++hudTick % 3 === 0) updateHud();
+  if (++hudTick % 3 === 0) {
+    drawSpectrumHud();
+  }
 }
